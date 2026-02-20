@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Voice</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to right, #1e3c72, #2a5298);
+            color: white;
+        }
+
+        .container {
+            width: 70%;
+            margin: 40px auto;
+            padding: 30px;
+        }
+
+        h2 {
+            color: #ffd700;
+        }
+
+        hr {
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 6px;
+            background-color: #ff9800;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #e68900;
+        }
+
+        select, input[type="file"] {
+            padding: 8px;
+            border-radius: 6px;
+            border: none;
+            margin-bottom: 10px;
+        }
+
+        #transcript {
+            background: white;
+            color: black;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 80px;
+        }
+
+        audio {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+<h2>🎤 CLEAR VOICE</h2>
+
+<label>Select Language:</label>
+<select id="language">
+    <option value="en">English</option>
+    <option value="hi">Hindi</option>
+</select>
+
+<br>
+
+<button onclick="startRecording()">Start</button>
+<button onclick="stopRecording()">Stop</button>
+
+<hr>
+
+<h3>Upload Audio File:</h3>
+<input type="file" id="fileInput">
+<br>
+<button onclick="uploadFile()">Upload & Process</button>
+
+<hr>
+
+<h3>Live Transcript:</h3>
+<div id="transcript"></div>
+
+<hr>
+
+<h3>Clean Playback:</h3>
+<audio id="cleanAudio" controls></audio>
+
+</div>
+
+<script>
+let mediaRecorder;
+let interval;
+
+async function startRecording() {
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = async function(event) {
+
+        let formData = new FormData();
+        formData.append("audio", event.data);
+        formData.append("language", document.getElementById("language").value);
+
+        let response = await fetch("/process_chunk", {
+            method: "POST",
+            body: formData
+        });
+
+        let data = await response.json();
+
+        if (data.text) {
+            document.getElementById("transcript").innerHTML += data.text + "<br>";
+            document.getElementById("cleanAudio").src = "/audio/" + data.audio;
+            document.getElementById("cleanAudio").play();
+        }
+    };
+
+    mediaRecorder.start();
+
+    interval = setInterval(() => {
+        mediaRecorder.stop();
+        mediaRecorder.start();
+    }, 5000);
+}
+
+function stopRecording() {
+    clearInterval(interval);
+    mediaRecorder.stop();
+}
+
+async function uploadFile() {
+
+    let file = document.getElementById("fileInput").files[0];
+    let formData = new FormData();
+    formData.append("file", file);
+    formData.append("language", document.getElementById("language").value);
+
+    let response = await fetch("/upload", {
+        method: "POST",
+        body: formData
+    });
+
+    let data = await response.json();
+
+    document.getElementById("transcript").innerHTML = data.text;
+    document.getElementById("cleanAudio").src = "/audio/" + data.audio;
+}
+</script>
+
+</body>
+</html>
