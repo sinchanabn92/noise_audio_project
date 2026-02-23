@@ -3,7 +3,7 @@ import uuid
 import whisper
 from gtts import gTTS
 
-model = whisper.load_model("base")
+model = whisper.load_model("tiny")
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
