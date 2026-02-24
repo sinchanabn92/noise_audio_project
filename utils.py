@@ -1,15 +1,24 @@
 import os
 import uuid
-import whisper
 from gtts import gTTS
 
-model = whisper.load_model("tiny")
+model = None  # Lazy loading
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
+def get_model():
+    global model
+    if model is None:
+        import whisper
+        model = whisper.load_model("tiny")
+    return model
+
+
 def process_chunk(audio_path, target_language="en"):
+
+    model = get_model()  # Load model only when needed
 
     # Step 1: Transcribe normally (auto detect spoken language)
     result = model.transcribe(audio_path, fp16=False)
@@ -36,9 +45,7 @@ def process_chunk(audio_path, target_language="en"):
             final_text = translate_result.get("text", "").strip()
 
         else:
-            # English → Hindi or any other to Hindi
-            # Whisper translate only supports TO English
-            # So we use gTTS trick via Google Translate
+            # English → Hindi or other language using googletrans
             from googletrans import Translator
             translator = Translator()
             translated = translator.translate(original_text, dest=target_language)
